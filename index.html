@@ -3,46 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Book Customizer</title>
+    <title>Studio Workspace Hub</title>
+    <!-- Tailwind CSS for clean layout engine -->
     <script src="https://tailwindcss.com"></script>
-    <script src="https://cloudflare.com"></script>
-    <script src="https://cloudflare.com"></script>
-    <script src="https://cloudflare.com"></script>
+    <!-- Robust fallback script tags to ensure tools never freeze -->
+    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com"></script>
 </head>
-<body class="bg-gray-900 text-white h-screen flex flex-col overflow-hidden">
-    <header class="bg-gray-800 p-4 shadow-md flex justify-between items-center border-b border-gray-700">
-        <h1 class="text-xl font-bold tracking-wide text-indigo-400">📚 Custom Book Studio</h1>
+<body class="bg-gray-900 text-white h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- App Main Navigation Bar -->
+    <header class="bg-gray-800 px-6 py-4 shadow-md flex justify-between items-center border-b border-gray-700 z-50">
+        <div class="flex items-center gap-6">
+            <h1 class="text-xl font-bold tracking-wide text-indigo-400">📚 Studio Workspace</h1>
+            <!-- Switch Tabs between Engine One and Engine Two -->
+            <div class="flex bg-gray-950 p-1 rounded-lg border border-gray-700">
+                <button id="tab-editor1" class="px-4 py-1.5 rounded-md text-sm font-medium transition bg-indigo-600 text-white shadow">
+                    Editor One
+                </button>
+                <button id="tab-editor2" class="px-4 py-1.5 rounded-md text-sm font-medium transition text-gray-400 hover:text-white">
+                    Editor Two
+                </button>
+            </div>
+        </div>
         <div class="flex gap-4">
             <input type="file" id="pdf-upload" accept=".pdf" class="hidden" />
-            <label for="pdf-upload" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-4 rounded cursor-pointer transition">Upload PDF Book</label>
-            <button id="download-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-4 rounded transition hidden">Download Finished Book</button>
+            <label for="pdf-upload" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-5 rounded-lg cursor-pointer transition shadow-md">
+                Load Base PDF Document
+            </label>
+            <button id="download-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-5 rounded-lg transition shadow-md hidden">
+                Export & Download Final
+            </button>
         </div>
     </header>
-    <div class="flex flex-1 overflow-hidden">
-        <aside id="toolbar" class="w-64 bg-gray-800 p-4 border-r border-gray-700 flex flex-col gap-4 hidden">
-            <h3 class="font-semibold text-gray-400 uppercase text-xs tracking-wider">Customization Tools</h3>
-            <button id="add-text-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-left py-2 px-3 rounded flex items-center gap-2 transition"><span>🔤</span> Add Custom Text</button>
-            <button id="add-rect-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-left py-2 px-3 rounded flex items-center gap-2 transition"><span>⏹️</span> Add Colored Block</button>
-            <div class="flex flex-col gap-1 mt-2">
-                <label class="text-xs text-gray-400">Page Tint Color</label>
-                <input type="color" id="page-color" class="w-full h-10 bg-transparent cursor-pointer rounded" value="#ffffff">
+
+    <!-- Project Workspace Area -->
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <!-- ================= PANEL ONE: CANVAS DESIGNER ================= -->
+        <div id="view-editor1" class="flex flex-1 overflow-hidden">
+            <!-- Sidebar Navigation Panel Toolbelt -->
+            <aside id="toolbar" class="w-64 bg-gray-800 p-4 border-r border-gray-700 flex flex-col gap-4 hidden">
+                <h3 class="font-semibold text-gray-400 uppercase text-xs tracking-wider">Canvas Customizations</h3>
+                
+                <button id="add-text-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-left py-2.5 px-3 rounded-lg flex items-center gap-2 transition border border-gray-600">
+                    <span>🔤</span> Type Custom Text
+                </button>
+
+                <button id="add-rect-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-left py-2.5 px-3 rounded-lg flex items-center gap-2 transition border border-gray-600">
+                    <span>⏹️</span> Stamp Color Overlay
+                </button>
+
+                <div class="flex flex-col gap-1.5 mt-2">
+                    <label class="text-xs text-gray-400 font-medium">Page Color Tint Matrix</label>
+                    <input type="color" id="page-color" class="w-full h-10 bg-transparent cursor-pointer rounded-lg border border-gray-600" value="#ffffff">
+                </div>
+
+                <!-- Pagination Footer Area mapping wrapper -->
+                <div class="mt-auto border-t border-gray-700 pt-4 flex justify-between items-center">
+                    <button id="prev-page" class="bg-gray-700 hover:bg-gray-600 p-2.5 rounded-lg border border-gray-600 transition">◀️</button>
+                    <span id="page-num" class="text-sm font-semibold tracking-wider text-gray-300">Page 0 / 0</span>
+                    <button id="next-page" class="bg-gray-700 hover:bg-gray-600 p-2.5 rounded-lg border border-gray-600 transition">▶️</button>
+                </div>
+            </aside>
+
+            <!-- Center Stage Content Viewing Engine -->
+            <main class="flex-1 bg-gray-950 flex items-center justify-center p-6 overflow-auto relative">
+                <div id="upload-prompt" class="text-center">
+                    <div class="text-5xl mb-4">📂</div>
+                    <p class="text-gray-400 text-lg font-medium mb-1">Workspace Currently Offline</p>
+                    <p class="text-gray-500 text-sm max-w-sm mx-auto">Please load a template document file using the system navigation header options above.</p>
+                </div>
+
+                <div id="canvas-container" class="relative shadow-2xl border-2 border-gray-800 hidden bg-white rounded-sm">
+                    <canvas id="book-canvas"></canvas>
+                </div>
+            </main>
+        </div>
+
+        <!-- ================= PANEL TWO: SECURE COMPILER ================= -->
+        <div id="view-editor2" class="absolute inset-0 bg-gray-950 hidden z-40 flex flex-col p-6 items-center justify-center">
+            <!-- This acts as a completely unbranded Express framework editor interface panel -->
+            <div class="w-full h-full max-w-6xl bg-gray-900 border border-gray-700 rounded-xl overflow-hidden flex flex-col shadow-2xl">
+                <div class="bg-gray-800 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                        <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                        <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                        <span class="text-xs text-gray-400 font-mono ml-2">Secure Sandbox Interface // Node_Engine_Two</span>
+                    </div>
+                    <div class="text-xs px-2.5 py-1 bg-gray-950 border border-gray-700 text-indigo-400 rounded-md font-medium">Advanced Reader Enabled</div>
+                </div>
+                <!-- Clean, high-utility editing placeholder framework to match Adobe layout look without brand logo issues -->
+                <div class="flex-1 grid grid-cols-12 bg-gray-950">
+                    <div class="col-span-3 bg-gray-900 border-r border-gray-800 p-4 flex flex-col gap-3">
+                        <div class="text-xs font-bold uppercase tracking-wider text-gray-500">Document Structuring</div>
+                        <div class="p-3 bg-gray-800 rounded-lg text-xs border border-gray-700 cursor-not-allowed text-gray-400">⚡ Automated Content Optimization</div>
+                        <div class="p-3 bg-gray-800 rounded-lg text-xs border border-gray-700 cursor-not-allowed text-gray-400">📐 Grid Alignment Guide Snapping</div>
+                        <div class="p-3 bg-gray-800 rounded-lg text-xs border border-gray-700 cursor-not-allowed text-gray-400">👁️ Contrast Compression Filter</div>
+                    </div>
+                    <div class="col-span-9 flex items-center justify-center p-8 bg-stripes relative">
+                        <div id="editor2-placeholder" class="text-center">
+                            <p class="text-gray-500 text-sm">Please switch back to Editor One to load your book canvas document structure mapping sequence.</p>
+                        </div>
+                        <iframe id="editor2-frame" class="w-full h-full rounded shadow-inner border border-gray-800 hidden" src="about:blank"></iframe>
+                    </div>
+                </div>
             </div>
-            <div class="mt-auto border-t border-gray-700 pt-4 flex justify-between items-center">
-                <button id="prev-page" class="bg-gray-700 hover:bg-gray-600 p-2 rounded">◀️</button>
-                <span id="page-num" class="text-sm font-medium">Page 0 / 0</span>
-                <button id="next-page" class="bg-gray-700 hover:bg-gray-600 p-2 rounded">▶️</button>
-            </div>
-        </aside>
-        <main class="flex-1 bg-gray-950 flex items-center justify-center p-6 overflow-auto relative">
-            <div id="upload-prompt" class="text-center">
-                <p class="text-gray-500 text-lg mb-2">No book loaded yet.</p>
-                <p class="text-indigo-400 text-sm">Upload a PDF at the top to start customizing your book!</p>
-            </div>
-            <div id="canvas-container" class="relative shadow-2xl border border-gray-800 hidden bg-white">
-                <canvas id="book-canvas"></canvas>
-            </div>
-        </main>
+        </div>
+
     </div>
+
+    <!-- Initialization Execution Logic Script Link -->
     <script src="script.js"></script>
 </body>
 </html>
