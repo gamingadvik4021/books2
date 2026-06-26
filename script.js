@@ -5,6 +5,7 @@ let pdfDoc = null;
 let pageNum = 1;
 let fabricCanvas = null;
 let pageCanvasData = {};
+let isRendering = false; // Flag to prevent multi-click thread collisions on heavy files
 
 // Workspace Node Elements
 const pdfUpload = document.getElementById('pdf-upload');
@@ -41,11 +42,9 @@ tabEditor2.addEventListener('click', () => {
     viewEditor1.classList.add('hidden');
     viewEditor2.classList.remove('hidden');
     
-    // Sync active document modifications down to the secure preview container window block framework
     if (fabricCanvas) {
         editor2Placeholder.classList.add('hidden');
         editor2Frame.classList.remove('hidden');
-        // Securely write contents directly into the frame window block to avoid any cross-origin errors
         const doc = editor2Frame.contentDocument || editor2Frame.contentWindow.document;
         doc.open();
         doc.write(`
@@ -65,6 +64,7 @@ tabEditor2.addEventListener('click', () => {
 // --- Core Workspace Engine Functions ---
 function initCanvas(width, height) {
     if (fabricCanvas) {
+        fabricCanvas.clear();
         fabricCanvas.dispose();
     }
     canvasContainer.style.width = `${width}px`;
@@ -77,6 +77,9 @@ function initCanvas(width, height) {
 }
 
 async function renderPage(num) {
+    if (isRendering) return; // Block multiple clicks until thread completes
+    isRendering = true;
+
     if (fabricCanvas && pageNum) {
         pageCanvasData[pageNum] = fabricCanvas.toJSON();
     }
@@ -84,28 +87,42 @@ async function renderPage(num) {
     pageNum = num;
     pageNumDisplay.textContent = `Page ${num} / ${pdfDoc.numPages}`;
     
-    const page = await pdfDoc.getPage(num);
-    // Use an optimized scale ratio to ensure clarity while maintaining canvas stability
-    const viewport = page.getViewport({ scale: 1.2 });
-    
-    initCanvas(viewport.width, viewport.height);
+    try {
+        const page = await pdfDoc.getPage(num);
+        // Scaled to exactly 1.0 to handle memory limits across long documents efficiently
+        const viewport = page.getViewport({ scale: 1.0 });
+        
+        initCanvas(viewport.width, viewport.height);
 
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = viewport.width;
-    tempCanvas.height = viewport.height;
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = viewport.width;
+        tempCanvas.height = viewport.height;
 
-    await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
+        await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
 
-    fabric.Image.fromURL(tempCanvas.toDataURL(), (img) => {
-        fabricCanvas.setBackgroundImage(img, fabricCanvas.renderAll.bind(fabricCanvas), {
-            scaleX: 1,
-            scaleY: 1
+        fabric.Image.fromURL(tempCanvas.toDataURL(), (img) => {
+            fabricCanvas.setBackgroundImage(img, fabricCanvas.renderAll.bind(fabricCanvas), {
+                scaleX: 1,
+                scaleY: 1
+            });
+            
+            if (pageCanvasData[num]) {
+                fabricCanvas.loadFromJSON(pageCanvasData[num], () => {
+                    fabricCanvas.renderAll();
+                    isRendering = false; // Unlock UI
+                });
+            } else {
+                isRendering = false; // Unlock UI
+            }
+            
+            // Clean up temporary DOM components instantly to save system heap RAM space
+            tempCanvas.remove();
         });
-        if (pageCanvasData[num]) {
-            fabricCanvas.loadFromJSON(pageCanvasData[num], fabricCanvas.renderAll.bind(fabricCanvas));
-        }
-    });
+    } catch (err) {
+        console.error(err);
+        isRendering = false;
+    }
 }
 
 // --- Event Handlers ---
@@ -117,7 +134,7 @@ pdfUpload.addEventListener('change', (e) => {
     fileReader.onload = async function() {
         try {
             const typedarray = new Uint8Array(this.result);
-            pdfDoc = await pdfjsLib.getDocument(typedarray).promise;
+            pdfDoc = await pdfjsLib.getDocument({data: typedarray}).promise;
             
             uploadPrompt.classList.add('hidden');
             toolbar.classList.remove('hidden');
@@ -127,7 +144,7 @@ pdfUpload.addEventListener('change', (e) => {
             pageCanvasData = {};
             await renderPage(1);
         } catch (err) {
-            alert("Error loading PDF structure: " + err.message);
+            alert("Error loading PDF structural parameters mapping layout: " + err.message);
         }
     };
     fileReader.readAsArrayBuffer(file);
@@ -135,12 +152,12 @@ pdfUpload.addEventListener('change', (e) => {
 
 addTextBtn.addEventListener('click', () => {
     if (!fabricCanvas) return;
-    const text = new fabric.IText('Click to Type Content', {
-        left: 80,
-        top: 80,
+    const text = new fabric.IText('Double Click to Edit', {
+        left: 50,
+        top: 50,
         fontFamily: 'sans-serif',
         fill: '#4f46e5',
-        fontSize: 26
+        fontSize: 24
     });
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
@@ -149,11 +166,11 @@ addTextBtn.addEventListener('click', () => {
 addRectBtn.addEventListener('click', () => {
     if (!fabricCanvas) return;
     const rect = new fabric.Rect({
-        left: 120,
-        top: 120,
-        fill: 'rgba(99, 102, 241, 0.25)',
-        width: 200,
-        height: 120,
+        left: 80,
+        top: 80,
+        fill: 'rgba(99, 102, 241, 0.3)',
+        width: 150,
+        height: 100,
         stroke: '#4f46e5',
         strokeWidth: 2
     });
@@ -169,7 +186,7 @@ pageColorInput.addEventListener('input', (e) => {
         width: fabricCanvas.width,
         height: fabricCanvas.height,
         fill: e.target.value,
-        opacity: 0.18,
+        opacity: 0.15,
         selectable: false,
         evented: false
     });
@@ -178,46 +195,66 @@ pageColorInput.addEventListener('input', (e) => {
 });
 
 prevPageBtn.addEventListener('click', () => {
-    if (!pdfDoc || pageNum <= 1) return;
+    if (!pdfDoc || pageNum <= 1 || isRendering) return;
     renderPage(pageNum - 1);
 });
 
 nextPageBtn.addEventListener('click', () => {
-    if (!pdfDoc || pageNum >= pdfDoc.numPages) return;
+    if (!pdfDoc || pageNum >= pdfDoc.numPages || isRendering) return;
     renderPage(pageNum + 1);
 });
 
-// --- Fixed High-Resolution Compilation Download Execution ---
+// --- Fixed High-Performance Download Engine For Large PDFs ---
 downloadBtn.addEventListener('click', async () => {
     if (!pdfDoc || !fabricCanvas) return;
     
-    // Lock down current screen viewport modifications parameters array state
+    // 1. Save the design layout of your current page first
     pageCanvasData[pageNum] = fabricCanvas.toJSON();
+    
+    // 2. Change button text to show live background loading progress
+    downloadBtn.disabled = true;
+    downloadBtn.style.opacity = "0.6";
+    downloadBtn.textContent = "Compiling Pages (0%)...";
     
     const { jsPDF } = window.jspdf;
     let finalDoc = null;
+    const originalPageNum = pageNum; // Remember where the user was looking
 
-    // Compile and chain data components together sequentially
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-        await renderPage(i);
-        
-        const rawDataString = fabricCanvas.toDataURL({ format: 'jpeg', quality: 0.95 });
-        const canvasW = fabricCanvas.width;
-        const canvasH = fabricCanvas.height;
+    try {
+        // 3. Process each page sequentially with micro-task breaks to clear system RAM
+        for (let i = 1; i <= pdfDoc.numPages; i++) {
+            // Update download button text with real-time percentage
+            const percent = Math.round((i / pdfDoc.numPages) * 100);
+            downloadBtn.textContent = `Processing Page ${i}/${pdfDoc.numPages} (${percent}%)`;
+            
+            // Bypass thread lock and render the target page
+            isRendering = false; 
+            await renderPage(i);
+            
+            // Wait 50 milliseconds to ensure the browser canvas has drawn the data completely
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // Compress the image data slightly (0.85 quality) to ensure large books don't crash
+            const rawDataString = fabricCanvas.toDataURL({ format: 'jpeg', quality: 0.85 });
+            const canvasW = fabricCanvas.width;
+            const canvasH = fabricCanvas.height;
 
-        if (i === 1) {
-            const pageLayoutMode = canvasW > canvasH ? 'l' : 'p';
-            finalDoc = new jsPDF(pageLayoutMode, 'px', [canvasW, canvasH]);
-        } else {
-            finalDoc.addPage([canvasW, canvasH]);
+            if (i === 1) {
+                const pageLayoutMode = canvasW > canvasH ? 'l' : 'p';
+                finalDoc = new jsPDF(pageLayoutMode, 'px', [canvasW, canvasH]);
+            } else {
+                finalDoc.addPage([canvasW, canvasH]);
+            }
+            
+            finalDoc.addImage(rawDataString, 'JPEG', 0, 0, canvasW, canvasH);
         }
-        
-        finalDoc.addImage(rawDataString, 'JPEG', 0, 0, canvasW, canvasH);
-    }
 
-    // Save final compilation securely out of memory cache stream
-    finalDoc.save('compiled-project-output.pdf');
-    
-    // Safely return viewer viewport perspective context layout mapping position
-    renderPage(pageNum);
-});
+        // 4. Trigger the browser's download window file stream saving action
+        downloadBtn.textContent = "Saving File...";
+        finalDoc.save('custom-book-edition.pdf');
+        
+    } catch (error) {
+        console.error("Download pipeline failed:", error);
+        alert("Download failed due to browser memory limits. Try using a slightly smaller PDF file.");
+    } finally {
+        // 5. Restore the user's view back to the page they were originally editing
